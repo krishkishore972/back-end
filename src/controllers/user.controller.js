@@ -123,13 +123,14 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new apiError(404, " invalid password.");
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+  const { accessToken , refreshToken } = await generateAccessAndRefreshTokens(
     user._id
   );
 
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+  // console.log(loggedInUser);
 
   const options = {
     httpOnly: true,
