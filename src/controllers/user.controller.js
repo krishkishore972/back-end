@@ -244,7 +244,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(200, req.user, "current user fetched successfully");
+    .json( new apiResponse(200, req.user, "current user fetched successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -324,6 +324,78 @@ const user = await User.findByIdAndUpdate(
 
 })
 
+const getUserChannelProfile = asyncHandler (  async (req,res) => {
+
+ const { username } = req.params
+
+ if (!username?.trim()) {
+  throw new apiError(400,"User name is missing")
+ }
+
+const channel =  await User.aggregate([
+  {
+    $match:{
+      username:username?.toLowerCase()
+    }
+  },
+  {
+    $lookup:{
+      from:"subscriptions",
+      localField:"_id",
+      foreignField:"channel",
+      as:"Subscribers"
+    }
+  },
+  {
+    $lookup:{
+      from:"subscriptions",
+      localField:"_id",
+      foreignField:"subscriber",
+      as:"SubscribedTo"
+    }
+  },
+  {
+    $addFields:{
+      subscriberCount:{
+        $size:"$Subscribers"
+      },
+      channelsSubscribedToCount:{
+        $size:"$SubscribedTo"
+      },
+      isSubscribed:{
+        $cond:{
+          if:{$in:[req.user?._id, "$Subscribers.subscriber"]},
+          then:true,
+          else:false
+        }
+      }
+    }
+  },
+  {
+    $project:{
+      fullName:1,
+      email:1,
+      subscriberCount:1,
+      isSubscribed:1,
+      avatar:1,
+      coverImage:1,
+      channelsSubscribedToCount:1,
+      subscriberCount:1,
+      channelsSubscribedToCount:1
+    }
+  }
+ ])
+
+ if (!channel?.length) {
+  throw new apiError(404 , "Channel doesn't exists ")
+ }
+
+ return res
+ .status(200)
+ .json(new apiResponse(200 , channel[0] , "User channel fetched successfully"))
+
+})
+
 export {
   loginUser,
   registerUser,
@@ -333,5 +405,6 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
+  getUserChannelProfile
 };
